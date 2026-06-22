@@ -1,5 +1,6 @@
 ﻿using BonesClassLibrary.FileFinders;
 
-string text = VietnamWarModLab.Path;
+string text = VietnamWarSource.Path;
+
 
 Console.WriteLine(text);

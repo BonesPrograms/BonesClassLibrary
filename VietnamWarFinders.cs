@@ -18,5 +18,5 @@ public static class VietnamWarModLab
 /// </summary>
 public static class VietnamWarSource
 {
-    public static readonly string Path = SteamGameFinder.FindOrThrow("Vietnam War");
+    public static readonly string Path = System.IO.Path.GetDirectoryName(SteamGameFinder.FindOrThrow("Vietnam War"))!;
 }
