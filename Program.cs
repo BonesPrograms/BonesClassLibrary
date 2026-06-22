@@ -1,6 +1,8 @@
-﻿using BonesClassLibrary.FileFinders;
+﻿using System.Text;
+using BonesClassLibrary.FileFinders;
 
-string text = VietnamWarSource.Path;
+string? text = null;
 
 
 Console.WriteLine(text);
+

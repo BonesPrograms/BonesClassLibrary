@@ -20,15 +20,11 @@ public static class SteamGameFinder
     /// </summary>
     public static string? Find(string exeName, EnumerationOptions? options = null)
     {
-        return Directory.EnumerateFiles(SteamCommonPath, SearchPattern(exeName), options ?? DefaultOption).FirstOrDefault();
+        ArgumentException.ThrowIfNullOrWhiteSpace(exeName, nameof(exeName));
+        return Directory.EnumerateFiles(SteamCommonPath, $"{exeName}*.exe", options ?? DefaultOption).FirstOrDefault();
     }
     public static string FindOrThrow(string exeName, EnumerationOptions? options = null) => Find(exeName, options) ?? throw new FileNotFoundException(null, $"{exeName}.exe");
 
-    static string SearchPattern(string exeName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(exeName, nameof(exeName));
-        return $"{exeName}*.exe";
-    }
     static string GetSteamPath()
     {
         using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam")) //if 32 bit, must change this string
