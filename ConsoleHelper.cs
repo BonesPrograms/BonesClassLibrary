@@ -33,7 +33,7 @@ public static class ConsoleHelper
     static void Loop<T>(IList<T> array, int index, Func<T, string>? toString = null, bool forwardLoop = true)
     {
         int num = forwardLoop ? 0 : array.Count - 1;
-        for (int i = num; Check(forwardLoop, ref i, array.Count); Increment(forwardLoop, ref i))
+        for (int i = num; Check(forwardLoop, i, array.Count); Increment(forwardLoop, ref i))
         {
             string txt = GetString(array[i], toString);
             if (i == index)
@@ -66,7 +66,7 @@ public static class ConsoleHelper
         else
             return "null";
     }
-    static bool Check(bool forwardLoop, ref int i, int count) => forwardLoop ? i < count : i >= 0;
-    static int Increment(bool forwardLoop, ref int i) => forwardLoop ? i++ : i--;
+    static bool Check(bool forwardLoop, int i, int count) => forwardLoop ? i < count : i >= 0;
+    static void Increment(bool forwardLoop, ref int i) { i = forwardLoop ? i + 1 : i - 1; }
 
 }
