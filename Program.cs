@@ -1,8 +1,3 @@
 ﻿using System.Text;
+using BonesClassLibrary;
 using BonesClassLibrary.FileFinders;
-
-string? text = null;
-
-
-Console.WriteLine(text);
-
