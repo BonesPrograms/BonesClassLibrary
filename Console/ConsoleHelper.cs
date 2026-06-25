@@ -48,7 +48,7 @@ public static class ConsoleHelper
         }
     }
 
-    static string GetString<T>(T obj, Func<T, string>? toString = null)
+    static string GetString<T>(T? obj, Func<T, string>? toString = null)
     {
         if (toString == null)
         {
