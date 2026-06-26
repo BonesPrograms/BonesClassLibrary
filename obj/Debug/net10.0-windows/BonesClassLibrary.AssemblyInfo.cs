@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BonesClassLibrary")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a98fe97a41dc48f14ac0ac3b9845204f745939ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eaafd432f97a1a28e7ef271ef31324f5b61f5f58")]
 [assembly: System.Reflection.AssemblyProductAttribute("BonesClassLibrary")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BonesClassLibrary")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

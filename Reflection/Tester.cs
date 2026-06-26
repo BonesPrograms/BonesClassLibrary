@@ -12,11 +12,11 @@ public static class ILParserTester
     {
         path ??= Path.Combine(VietnamWarModLab.Path, @"BonesClassLibrary\Reflection\methodread.il");
         ReadBytes(mthd.GetMethodBody()); //not rly necessary anymore
-        List<ILInstruction> codes = ILParser.GetIL(mthd);
+        List<ILInstruction> codes = new ILParser(mthd).GetIL();
         Console.WriteLine("Reading method opcodes");
         codes.ToList().ForEach(Console.WriteLine); //this here is MY shit, we are testing to see if this is good
         Console.WriteLine("Reading actual IL to file!");
-        ILReader.PrintIL(mthd); //this is monocecil, we are testing to see if my shit is as good as monocecil's reader
+        MonoCecilReader.PrintIL(mthd); //this is monocecil, we are testing to see if my shit is as good as monocecil's reader
     }
 
     static void ReadBytes(MethodBody? body)
