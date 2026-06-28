@@ -60,7 +60,8 @@ public abstract class MetadataReader
         string ret = string.IsNullOrWhiteSpace(mthd.ReturnType.Name) ? "void" : mthd.ReturnType.Name.ToLower();
         if (ret == "boolean")
             ret = "bool";
-        sb.Append(FixGenericString(ret) + ' ');
+        sb.Append(FixGenericString(ret));
+        sb.Append(' ');
 
         sb.Append(CheckTypeGenerics(mthd.DeclaringType));
         sb.Append($"::{mthd.Name}");

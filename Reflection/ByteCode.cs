@@ -32,15 +32,13 @@ public sealed class ByteCode : MetadataReader
     }
     public override string ToString()
     {
-        return $"IL_{Offset.ToString("x4")}: {OpCodeToString()} {OperandToString()}";
-    }
-
-    string OpCodeToString()
-    {
         StringBuilder sb = new();
+        sb.Append($"IL_{Offset:x4}: ");
         sb.Append(OpCode.ToString());
-        if(Object is ConstructorInfo)
-        sb.Append(" instance void");
+        if (Object is ConstructorInfo)
+            sb.Append(" instance void");
+        sb.Append(' ');
+        sb.Append(OperandToString());
         return sb.ToString();
     }
     string OperandToString()
@@ -48,7 +46,7 @@ public sealed class ByteCode : MetadataReader
         if (OpCode.OperandType == OperandType.InlineBrTarget || OpCode.OperandType == OperandType.ShortInlineBrTarget)
         {
             int num = (int)Operand!; //jump target offsets are max 32bit and will never be null
-            return $"IL_{num.ToString("x4")}";
+            return $"IL_{num:x4}";
         }
         else if (Object is string)
             return $"\"{Object}\"";
