@@ -1,10 +1,8 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-using HarmonyLib;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -21,8 +19,8 @@ public enum MetadataType
     Event,
     Constructor,
     Enum,
-
-    Array
+    Array,
+    Collection //collections dont really have obvious metadata but i like to include them anyways
 }
 
 /// <summary>
@@ -72,16 +70,19 @@ public sealed class Metadata : MetadataReader
             return MetadataType.Enum;
         else if (type.IsArray)
             return MetadataType.Array;
-        else if (type.IsClass)
-            return MetadataType.Class;
         else if (type.IsInterface)
             return MetadataType.Interface;
+        else if (type != typeof(string) && (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) || typeof(System.Collections.ICollection).IsAssignableFrom(type)))
+            return MetadataType.Collection;
+        else if (type.IsClass)
+            return MetadataType.Class;
         else
             return MetadataType.Struct;
     }
 
     //i may add access modifiers - it would be easy, just put my access modifiers right before we call base.tostring()
     //may also want to add other clarifiers like if they are abstract, sealed, virtual, new, etc
+    ///will require lots of separate methods and casting, cannot do this like i did MemberToString
     public override string ToString()
     {
         StringBuilder sb = new();

@@ -37,12 +37,12 @@ public abstract class MetadataReader
             objkind = "enum";
         else if (type.IsArray)
             objkind = "array";
-        else if (type != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(type))
+        else if (type.IsInterface)
+            objkind = "interface";
+        else if (type != typeof(string) && (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) || typeof(System.Collections.ICollection).IsAssignableFrom(type)))
             objkind = "collection";
         else if (type.IsClass)
             objkind = "class";
-        else if (type.IsInterface)
-            objkind = "interface";
         else
             objkind = "struct";
         return $"{objkind} {CheckTypeGenerics(type)}";
