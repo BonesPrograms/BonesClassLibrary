@@ -1,0 +1,19 @@
+Okay
+
+So we have a 1,000,000 maximum
+
+Lets say we get a number uh
+
+Incomes the number 4,000,000
+
+So we want to know how many chunks we need
+
+4,000,000 / 1,000,000 = 3 chunks
+
+Okay but what if we get the number 500
+
+500 / 10000 is bad
+
+okay yeah plus chunk size
+
+

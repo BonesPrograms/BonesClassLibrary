@@ -8,6 +8,23 @@ using HarmonyLib;
 
 namespace BonesClassLibrary.Reflection;
 
+
+public enum MetadataType
+{
+    Member,
+    Class,
+    Struct,
+    Interface,
+    Field,
+    Property,
+    Method,
+    Event,
+    Constructor,
+    Enum,
+
+    Array
+}
+
 /// <summary>
 /// Multiton wrapper for a metadata object. Primarily exists to return readable and informative strings about the metadata.
 /// </summary>
@@ -22,8 +39,9 @@ public sealed class Metadata : MetadataReader
     public MemberInfo Info => (MemberInfo)Object!;
     public Module Module => Info.Module;
     public int IntToken => Info.MetadataToken;
-    public string Name => Info.Name;
-
+    public string Name => Info.Name; //may change this to be info.tostring() for type objects (so you can see the namespace), not sure how that will effect methodinfo objects tho
+    public readonly MetadataType MetadataType; //mostly for querying - you have options, can search metadata maps by metadatatype/name, or can search them by their info object
+                                               //using the method Metadata.Represents(MemberInfo)
     /// <summary>
     /// 32bit byte sequence of the MetadataToken.
     /// </summary>
@@ -33,6 +51,33 @@ public sealed class Metadata : MetadataReader
         byte[] bytes = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(bytes, info.MetadataToken);
         ByteToken = [.. bytes];
+        MetadataType = GetMetadataType(info);
+    }
+
+    static MetadataType GetMetadataType(MemberInfo info) => info switch
+    {
+        ConstructorInfo => MetadataType.Constructor,
+        PropertyInfo => MetadataType.Property,
+        FieldInfo => MetadataType.Field,
+        Type => GetMetadataTypeFromTypeObject((Type)info),
+        EventInfo => MetadataType.Event,
+        MethodInfo => MetadataType.Method,
+        _ => MetadataType.Member
+
+    };
+
+    static MetadataType GetMetadataTypeFromTypeObject(Type type)
+    {
+        if (type.IsEnum)
+            return MetadataType.Enum;
+        else if (type.IsArray)
+            return MetadataType.Array;
+        else if (type.IsClass)
+            return MetadataType.Class;
+        else if (type.IsInterface)
+            return MetadataType.Interface;
+        else
+            return MetadataType.Struct;
     }
 
     //i may add access modifiers - it would be easy, just put my access modifiers right before we call base.tostring()
@@ -43,7 +88,7 @@ public sealed class Metadata : MetadataReader
         sb.Append(base.ToString());
         sb.Append($" Token:: {IntToken}");
         sb.Append(" AsBytes:: ");
-        foreach(var bits in ByteToken)
+        foreach (var bits in ByteToken)
         {
             sb.Append($"{bits} ");
         }

@@ -1,17 +1,11 @@
 IL_0000: nop 
-IL_0001: newobj instance void TokenTest::.ctor()
-IL_0006: stloc.0 
-IL_0007: ldloca.s System.ValueTuple`2[System.Int32,System.Int32] (1)
-IL_0009: ldc.i4.1 
-IL_000a: ldc.i4.1 
-IL_000b: call instance void ValueTuple<Int32, Int32>::.ctor(Int32, Int32)
-IL_0010: ldc.i4 11111111
-IL_0015: call static uint128 UInt128::op_Implicit(UInt32)
-IL_001a: stloc.2 
-IL_001b: ldstr ""
-IL_0020: stloc.3 
-IL_0021: ldc.i4 231244
-IL_0026: stloc.s System.Int32 (4)
-IL_0028: ldloca.s System.DateTime (5)
-IL_002b: initobj struct DateTime
-IL_0030: ret 
+IL_0001: ldloca.s System.Decimal (0)
+IL_0003: ldc.i4 -1554250534
+IL_0008: ldc.i4.5 
+IL_0009: ldc.i4.0 
+IL_000a: ldc.i4.0 
+IL_000b: ldc.i4.4 
+IL_000c: call instance void Decimal::.ctor(Int32, Int32, Int32, Boolean, Byte)
+IL_0011: newobj instance void List<String>::.ctor()
+IL_0016: stloc.1 
+IL_0017: ret 

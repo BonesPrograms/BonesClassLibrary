@@ -33,7 +33,13 @@ public abstract class MetadataReader
     static string TypeToString(Type type)
     {
         string objkind;
-        if (type.IsClass)
+        if (type.IsEnum)
+            objkind = "enum";
+        else if (type.IsArray)
+            objkind = "array";
+        else if (type != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(type))
+            objkind = "collection";
+        else if (type.IsClass)
             objkind = "class";
         else if (type.IsInterface)
             objkind = "interface";

@@ -1,34 +1,29 @@
-﻿using System.Reflection;
+﻿using System.Collections;
+using System.ComponentModel;
+using System.Numerics;
+using System.Reflection;
 using System.Text;
 using BonesClassLibrary;
 using BonesClassLibrary.Reflection;
 using HarmonyLib;
-using TestSpace;
 
-MethodInfo mthd = AccessTools.Method(typeof(TokenTest), "MetaTest");
-ILReader reader = new(mthd);
-reader.PrintIL();
+var map = Metadata.Get(typeof(Test));
+Console.WriteLine(map);
 
-
-namespace TestSpace
+static byte[] TwoGigArray()
+{
+    return new byte[Array.MaxLength];
+}
+class Test() : IEnumerable
 {
 
-    class TestObject
+    public IEnumerator GetEnumerator()
     {
-
+        yield return new();
     }
-
-    class TokenTest
+    public void Method()
     {
-        public void MetaTest()
-        {
-            TokenTest t = new();
-            (int, int) numer = (1,1);
-            UInt128 integer = 11111111;
-            string obj = "";
-            int num = 231244;
-            DateTime time = new();
-        }
+        decimal dec = 2421555.3242M;
+        List<string> list = new();
     }
-
 }

@@ -40,13 +40,13 @@ public sealed class ILReader
     public readonly IReadOnlyList<byte> RawBytes;
     readonly IList<LocalVariableInfo> Locals;
     readonly ParameterInfo[] Params;
-    public readonly Module Module;
-    public readonly MethodInfo Method;
+    readonly Module Module;
+    readonly MethodInfo Method;
 
     /// <summary>
     /// 0 bytes.
     /// </summary>
-    const byte ZeroBit = 0x00; //0 bytes
+    const byte ZeroBit = 0x00; 
 
     /// <summary>
     /// 1 byte.
@@ -144,22 +144,25 @@ public sealed class ILReader
     }
 
     //This needs to return an object for the token, because the token is sometimes just a numeric value for a struct and not an actual 32bit metadata token
+    //(in other words, it is the operand)
 
     //First off, if you have a double or a float, you will lose floating point precision if you do not return it as anything less than a double.
     //Second off, if you have a long, you will lose integer precision if you return it as a double
 
     //A decimal is 128 bits, but still cannot fully maintain integer precision, floating point precision, range and magnitude
-    //of other integral numeric types (such as a double or float) that are cast to decimal.
+    //of other integral numeric types (such as a double or float) that are cast to decimal, because raw byte count isn't enough to get the job done
 
     //I should note - actual Int128 structs will be readable until they reach around 19-20 digits (a long can only hold 19 digits)
     //So far, this cannot be remedied - there is no 128 bit operand type, and even real decompilers (like ilspy)
     //will not properly decompile the UInt128 number 11111111111111111111, for example. Becaue ilspy doesnt do it, i wont do it either, lol!
+
+    //That being said, decimal values are also very unreadable, but you will see how that works in IL
     object GetToken(int i, ref int size, OperandType type)
     {
         if (size == ZeroBit)
             return ZeroBit; //no operand
         else if (size == EightBit)
-            return (int)IL[i]; //if you dont cast this, it will throw later when you pass it as a parameter to GetVariable, claiming it cannot cast system.byte to system.int32
+            return (int)IL[i]; //if you dont cast this here, it will throw later when you pass it as a parameter to GetVariable, claiming it cannot cast system.byte to system.int32
         else if (size == SixteenBit)
             return BinaryPrimitives.ReadInt16LittleEndian(IL.AsSpan(i, SixteenBit)); //BitConverter works, but BinaryPrimitives will automatically handle it without us
         else if (size == ThirtyTwoBit)                                       //having to reverse the bytes to get their token on BigEndian systems
