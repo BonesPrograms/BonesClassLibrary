@@ -83,17 +83,20 @@ public sealed class Metadata : MetadataReader
     //i may add access modifiers - it would be easy, just put my access modifiers right before we call base.tostring()
     //may also want to add other clarifiers like if they are abstract, sealed, virtual, new, etc
     ///will require lots of separate methods and casting, cannot do this like i did MemberToString
-    public override string ToString()
+    /// other stuff like checking if a metadata is static or instance, such as if a class or property or field is static
+    /// maybe the word "method" before methods, "constructor" before constructors
+    /// maybe also get generic constraits too, like where T : Memberinfo
+    protected override StringBuilder ToStringBuilder()
     {
         StringBuilder sb = new();
-        sb.Append(base.ToString());
+        sb.Append(base.ToStringBuilder());
         sb.Append($" Token:: {IntToken}");
         sb.Append(" AsBytes:: ");
         foreach (var bits in ByteToken)
         {
             sb.Append($"{bits} ");
         }
-        return sb.ToString();
+        return sb;
     }
 
     /// <summary>

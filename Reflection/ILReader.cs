@@ -2,6 +2,8 @@ using System.Reflection.Emit;
 using System.Reflection;
 using BonesClassLibrary.FileFinders;
 using System.Buffers.Binary;
+using System.Text;
+using static BonesClassLibrary.Bytes.ByteReader;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -42,33 +44,10 @@ public sealed class ILReader
     readonly ParameterInfo[] Params;
     readonly Module Module;
     readonly MethodInfo Method;
-
-    /// <summary>
-    /// 0 bytes.
-    /// </summary>
-    const byte ZeroBit = 0x00; 
-
-    /// <summary>
-    /// 1 byte.
-    /// </summary>
-    const byte EightBit = 0x01; 
-    /// <summary>
-    /// 2 bytes.
-    /// </summary>
-    const byte SixteenBit = 0x02; 
-    /// <summary>
-    /// 4 bytes.
-    /// </summary>
-    const byte ThirtyTwoBit = 0x04; 
-    /// <summary>
-    /// 8 bytes.
-    /// </summary>
-    const byte SixtyFourBit = 0x08;
-
     /// <summary>
     /// Some opcodes are 2 bytes long, they will always start with a "prefix" byte.
     /// </summary>
-    const byte PrefixBit = 0xFE; 
+    const byte PrefixBit = 0xFE;
     readonly byte[] IL;
     readonly Type[]? GenericMethodArgs;
     readonly Type[]? GenericTypeArgs;
@@ -84,6 +63,11 @@ public sealed class ILReader
         GenericMethodArgs = method.GetGenericArguments();
         GenericTypeArgs = method.DeclaringType?.GetGenericArguments();
     }
+
+    // public string ReadIL()
+    // {
+    //     StringBuilder sb = new();
+    // }
 
     /// <summary>
     /// Prints readable IL to a file.
@@ -119,7 +103,7 @@ public sealed class ILReader
         OpCode code = GetOpCode(ref i);
         int size = OperandSize(code.OperandType);
         var token = GetToken(i, ref size, code.OperandType);
-        object? operand = size == ZeroBit ? null : GetOperand(code, token, i);
+        object? operand = size == x0bit ? null : GetOperand(code, token, i);
         codes.Add(new(code, operand, i - 1)); //for some reason it is off by 1, you want to shift the offset back by 1 or every label will be off by 1 individually and cumulatively so all labels will be off
         i += size;
     }
@@ -159,28 +143,28 @@ public sealed class ILReader
     //That being said, decimal values are also very unreadable, but you will see how that works in IL
     object GetToken(int i, ref int size, OperandType type)
     {
-        if (size == ZeroBit)
-            return ZeroBit; //no operand
-        else if (size == EightBit)
-            return (int)IL[i]; //if you dont cast this here, it will throw later when you pass it as a parameter to GetVariable, claiming it cannot cast system.byte to system.int32
-        else if (size == SixteenBit)
-            return BinaryPrimitives.ReadInt16LittleEndian(IL.AsSpan(i, SixteenBit)); //BitConverter works, but BinaryPrimitives will automatically handle it without us
-        else if (size == ThirtyTwoBit)                                       //having to reverse the bytes to get their token on BigEndian systems
+        if (size == x0bit)
+            return x0bit; //no operand
+        else if (size == x8bit)
+            return IL[i]; 
+        else if (size == x16bit)
+            return BinaryPrimitives.ReadInt16LittleEndian(IL.AsSpan(i, x16bit)); //BitConverter works, but BinaryPrimitives will automatically handle it without us
+        else if (size == x32bit)                                       //having to reverse the bytes to get their token on BigEndian systems
         {                                                                       //IL is always stored as little endian, but at runtime could be bigendian
             int token;
             if (type == OperandType.ShortInlineR)
-                return BinaryPrimitives.ReadSingleLittleEndian(IL.AsSpan(i, ThirtyTwoBit));
+                return BinaryPrimitives.ReadSingleLittleEndian(IL.AsSpan(i, x32bit));
             else
-                token = BinaryPrimitives.ReadInt32LittleEndian(IL.AsSpan(i, ThirtyTwoBit)); ;
+                token = BinaryPrimitives.ReadInt32LittleEndian(IL.AsSpan(i, x32bit)); ;
             if (type == OperandType.InlineSwitch)
                 size += token * 4;
             return token;
         }
-        else if (size == SixtyFourBit)
+        else if (size == x64bit)
         {
             if (type == OperandType.InlineR)
-                return  BinaryPrimitives.ReadDoubleLittleEndian(IL.AsSpan(i, SixtyFourBit));
-            return BinaryPrimitives.ReadInt64LittleEndian(IL.AsSpan(i, SixtyFourBit));
+                return BinaryPrimitives.ReadDoubleLittleEndian(IL.AsSpan(i, x64bit));
+            return BinaryPrimitives.ReadInt64LittleEndian(IL.AsSpan(i, x64bit));
         }
         throw new NotSupportedException("Instruction is not 0-bit, 8-bit, 16-bit, 32-bit, or 64-bit!!!! How did this happen?!");
     }
@@ -189,21 +173,22 @@ public sealed class ILReader
     =>
         code.OperandType switch
         {
-            OperandType.ShortInlineI => (int)token,
+            OperandType.ShortInlineBrTarget=>(byte)token + i + 1,
+            OperandType.ShortInlineI => (byte)token,
             OperandType.InlineI => (int)token,
-            OperandType.InlineR => (double)token,
             OperandType.ShortInlineR => (float)token,
+            OperandType.InlineR => (double)token,
             OperandType.InlineI8 => (long)token,
+            OperandType.ShortInlineVar => GetVariable(code, (byte)token),
+            OperandType.InlineVar => GetVariable(code, (short)token),
             OperandType.InlineMethod => Module.ResolveMethod((int)token, GenericTypeArgs, GenericMethodArgs),
             OperandType.InlineField => Module.ResolveField((int)token, GenericTypeArgs, GenericMethodArgs),
             OperandType.InlineType => Module.ResolveType((int)token, GenericTypeArgs, GenericMethodArgs),
             OperandType.InlineString => Module.ResolveString((int)token),
             OperandType.InlineTok => Module.ResolveMember((int)token, GenericTypeArgs, GenericMethodArgs),
-            OperandType.ShortInlineVar => GetVariable(code, (int)token),
-            OperandType.InlineVar => GetVariable(code, (int)token),
             OperandType.InlineSig => Module.ResolveSignature((int)token),
             OperandType.InlineNone or OperandType.InlineSwitch => null,
-            OperandType.InlineBrTarget or OperandType.ShortInlineBrTarget => (int)token + i + 1, //idk why u need to do +1 but it is always -1 instruction off from its actual jump target
+            OperandType.InlineBrTarget => (int)token + i + 1, //idk why u need to do +1 but it is always -1 instruction off from its actual jump target
             _ => throw new NotSupportedException()
         };
 
@@ -229,11 +214,11 @@ public sealed class ILReader
     static byte OperandSize(OperandType type) =>
     type switch
     {
-        OperandType.InlineNone => ZeroBit,
-        OperandType.ShortInlineVar or OperandType.ShortInlineI or OperandType.ShortInlineBrTarget => EightBit,
-        OperandType.InlineVar => SixteenBit,
-        OperandType.InlineTok or OperandType.InlineBrTarget or OperandType.InlineField or OperandType.InlineI or OperandType.InlineMethod or OperandType.InlineSig or OperandType.InlineString or OperandType.InlineType or OperandType.ShortInlineR or OperandType.InlineSwitch => ThirtyTwoBit,
-        OperandType.InlineR or OperandType.InlineI8 or OperandType.InlineR => SixtyFourBit
+        OperandType.InlineNone => x0bit,
+        OperandType.ShortInlineVar or OperandType.ShortInlineI or OperandType.ShortInlineBrTarget => x8bit,
+        OperandType.InlineVar => x16bit,
+        OperandType.InlineTok or OperandType.InlineBrTarget or OperandType.InlineField or OperandType.InlineI or OperandType.InlineMethod or OperandType.InlineSig or OperandType.InlineString or OperandType.InlineType or OperandType.ShortInlineR or OperandType.InlineSwitch => x32bit,
+        OperandType.InlineR or OperandType.InlineI8 => x64bit
     };
 #pragma warning restore CS8509
 }

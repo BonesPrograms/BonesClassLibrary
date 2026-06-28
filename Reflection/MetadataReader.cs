@@ -17,37 +17,57 @@ public abstract class MetadataReader
         Object = obj;
     }
 
-    public override string ToString() => Object switch
+    /// <summary>
+    /// Virtual tostring stringbuilder for inheritors.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual StringBuilder ToStringBuilder() => Object switch
     {
         MethodInfo => MethodToString((MethodInfo)Object),
         ConstructorInfo => ConstructorToString((ConstructorInfo)Object),
         FieldInfo or PropertyInfo or EventInfo => MemberToString((MemberInfo)Object),
         Type => TypeToString((Type)Object),
-        _ => Object?.ToString() ?? ""
-    };
-    static string MemberToString(MemberInfo member)
+        _ => new StringBuilder(Object?.ToString() ?? "") 
+    };                                                   
+                                                   
+                                                  
+    public override sealed string ToString() //inheritors should not invoke tostring in their tostringbuilder override otherwise it will obviously create duplicate stringbuilders
     {
-        return $"{member.MemberType.ToString().ToLower()} {CheckTypeGenerics(member.DeclaringType)}::{CheckTypeGenerics(member.GetUnderlyingType())} {FixGenericString(member.Name)}";
+        return ToStringBuilder().ToString();
+    }
+    static StringBuilder MemberToString(MemberInfo member)
+    {
+        StringBuilder sb = new();
+        sb.Append(member.MemberType.ToString().ToLower());
+        sb.Append(' ');
+        sb.Append(CheckTypeGenerics(member.DeclaringType));
+        sb.Append("::");
+        sb.Append(CheckTypeGenerics(member.GetUnderlyingType()));
+        sb.Append(' ');
+        sb.Append(FixGenericString(member.Name));
+        return sb;
     }
 
-    static string TypeToString(Type type)
+    static StringBuilder TypeToString(Type type)
     {
-        string objkind;
+        StringBuilder sb = new();
         if (type.IsEnum)
-            objkind = "enum";
+            sb.Append("enum");
         else if (type.IsArray)
-            objkind = "array";
+            sb.Append("array");
         else if (type.IsInterface)
-            objkind = "interface";
+            sb.Append("interface");
         else if (type != typeof(string) && (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) || typeof(System.Collections.ICollection).IsAssignableFrom(type)))
-            objkind = "collection";
+            sb.Append("collection");
         else if (type.IsClass)
-            objkind = "class";
+            sb.Append("class");
         else
-            objkind = "struct";
-        return $"{objkind} {CheckTypeGenerics(type)}";
+            sb.Append("struct");
+        sb.Append(' ');
+        sb.Append(CheckTypeGenerics(type));
+        return sb;
     }
-    static string ConstructorToString(ConstructorInfo ctor)
+    static StringBuilder ConstructorToString(ConstructorInfo ctor)
     {
         StringBuilder sb = new();
         if (ctor.DeclaringType != null)
@@ -55,10 +75,10 @@ public abstract class MetadataReader
             sb.Append(CheckTypeGenerics(ctor.DeclaringType));
         }
         sb.Append($"::.ctor{ParamsToString(ctor.GetParameters())}");
-        return sb.ToString();
+        return sb;
     }
 
-    static string MethodToString(MethodInfo mthd)
+    static StringBuilder MethodToString(MethodInfo mthd)
     {
         StringBuilder sb = new();
         sb.Append(mthd.IsStatic ? "static " : "instance ");
@@ -70,16 +90,17 @@ public abstract class MetadataReader
         sb.Append(' ');
 
         sb.Append(CheckTypeGenerics(mthd.DeclaringType));
-        sb.Append($"::{mthd.Name}");
+        sb.Append("::");
+        sb.Append(mthd.Name);
 
         AddGenericArguments(sb, mthd.GetGenericArguments());
         sb.Append(ParamsToString(mthd.GetParameters()));
 
-        return sb.ToString();
+        return sb;
 
     }
 
-    static string ParamsToString(ParameterInfo[] args)
+    static StringBuilder ParamsToString(ParameterInfo[] args)
     {
         StringBuilder txt = new();
         txt.Append('(');
@@ -91,14 +112,14 @@ public abstract class MetadataReader
                 txt.Append($", ");
         }
         txt.Append(')');
-        return txt.ToString();
+        return txt;
     }
     /// <summary>
     /// Be careful using this and FixGenericString together or you will not understand why you are producing duplicate name strings.
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    static string? CheckTypeGenerics(Type? type)
+    static StringBuilder? CheckTypeGenerics(Type? type)
     {
         if (type != null)
         {
@@ -106,7 +127,7 @@ public abstract class MetadataReader
             StringBuilder sb = new();
             sb.Append(FixGenericString(type.Name)); //adds name string here
             AddGenericArguments(sb, generics);
-            return sb.ToString();
+            return sb;
         }
         return null;
     }
@@ -114,7 +135,7 @@ public abstract class MetadataReader
     static string FixGenericString(string strng)
     {
         if (strng.Length >= 2 && strng[^2] == '`')
-            return strng[..strng.IndexOf('`')];
+            strng = strng[..strng.IndexOf('`')];
         return strng;
     }
 

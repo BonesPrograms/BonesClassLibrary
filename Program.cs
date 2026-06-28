@@ -4,26 +4,51 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using BonesClassLibrary;
+using BonesClassLibrary.Bytes;
+using BonesClassLibrary.Extensions;
 using BonesClassLibrary.Reflection;
 using HarmonyLib;
 
-var map = Metadata.Get(typeof(Test));
-Console.WriteLine(map);
+new ILReader(AccessTools.Method(typeof(Test), "Switching")).PrintIL();
 
-static byte[] TwoGigArray()
+var data = Metadata.MetadataMap(typeof(Test).Module);
+foreach(var obj in data)
 {
-    return new byte[Array.MaxLength];
+    Console.WriteLine("\nREADING TYPE!");
+    Console.WriteLine(obj.Key);
+    foreach(var ob in obj.Value)
+    Console.WriteLine(ob);
 }
-class Test() : IEnumerable
+class Test
 {
 
-    public IEnumerator GetEnumerator()
+    public int Switching() //im not seeing hte 'swithc' opcode!!!!! check my other switches
     {
-        yield return new();
+        int vibe = 5;
+        switch (vibe)
+        {
+            case 3:
+                break;
+            case 2:
+                break;
+        }
+        return 55 switch
+        {
+            1 => 2,
+            3 => 4,
+            _ => default
+        };
     }
-    public void Method()
+    public void Method() //this is for researching how to fix uints not displaying properly in my IL
     {
-        decimal dec = 2421555.3242M;
-        List<string> list = new();
+        short shorter = 32424;
+        uint unsigned = uint.MaxValue;
+        uint unsigned6 = 4294967295;
+        uint unsigned2 = 4294967294;
+        uint unsigned87 = 4294967293;
+        uint insigned3 = 3294977294;
+        uint insigned4 = 999999999;
+        int signed0 = int.MaxValue;
+        int signed = 2147483647;
     }
 }
