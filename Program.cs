@@ -5,7 +5,7 @@ using BonesClassLibrary.Reflection;
 using HarmonyLib;
 using TestSpace;
 
-MethodInfo mthd = AccessTools.Method(typeof(ConsoleHelper), "Choices");
+MethodInfo mthd = AccessTools.Method(typeof(TokenTest), "MetaTest");
 ILReader reader = new(mthd);
 reader.PrintIL();
 
@@ -20,14 +20,14 @@ namespace TestSpace
 
     class TokenTest
     {
-        public int MetaTest()
+        public void MetaTest()
         {
-            int i = 0;
-            return i switch
-            {
-                1 => 2,
-                2=>3,
-            };
+            TokenTest t = new();
+            (int, int) numer = (1,1);
+            UInt128 integer = 11111111;
+            string obj = "";
+            int num = 231244;
+            DateTime time = new();
         }
     }
 

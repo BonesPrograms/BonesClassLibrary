@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj": {}
+    "C:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj": {}
   },
   "projects": {
-    "c:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj": {
+    "C:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj",
         "projectName": "BonesClassLibrary",
-        "projectPath": "c:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj",
+        "projectPath": "C:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\BonesClassLibrary.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\obj\\",
+        "outputPath": "C:\\Users\\user\\Desktop\\VietnamWarModLab\\BonesClassLibrary\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

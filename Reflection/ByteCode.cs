@@ -35,11 +35,13 @@ public sealed class ByteCode : MetadataReader
         return $"IL_{Offset.ToString("x4")}: {OpCodeToString()} {OperandToString()}";
     }
 
-    string? OpCodeToString()
+    string OpCodeToString()
     {
-        if(OpCode == OpCodes.Newobj)
-        return "newobj instance void";
-        return OpCode.ToString();;
+        StringBuilder sb = new();
+        sb.Append(OpCode.ToString());
+        if(Object is ConstructorInfo)
+        sb.Append(" instance void");
+        return sb.ToString();
     }
     string OperandToString()
     {
