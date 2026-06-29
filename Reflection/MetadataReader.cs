@@ -27,10 +27,10 @@ public abstract class MetadataReader
         ConstructorInfo => ConstructorToString((ConstructorInfo)Object),
         FieldInfo or PropertyInfo or EventInfo => MemberToString((MemberInfo)Object),
         Type => TypeToString((Type)Object),
-        _ => new StringBuilder(Object?.ToString() ?? "") 
-    };                                                   
-                                                   
-                                                  
+        _ => new StringBuilder(Object?.ToString() ?? "")
+    };
+
+
     public override sealed string ToString() //inheritors should not invoke tostring in their tostringbuilder override otherwise it will obviously create duplicate stringbuilders
     {
         return ToStringBuilder().ToString();
@@ -51,7 +51,9 @@ public abstract class MetadataReader
     static StringBuilder TypeToString(Type type)
     {
         StringBuilder sb = new();
-        if (type.IsEnum)
+        if (typeof(Delegate).IsAssignableFrom(type))
+            sb.Append("delegate");
+        else if (type.IsEnum)
             sb.Append("enum");
         else if (type.IsArray)
             sb.Append("array");
@@ -119,7 +121,7 @@ public abstract class MetadataReader
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    static StringBuilder? CheckTypeGenerics(Type? type)
+    protected static StringBuilder? CheckTypeGenerics(Type? type)
     {
         if (type != null)
         {
@@ -134,10 +136,10 @@ public abstract class MetadataReader
 
     static string FixGenericString(string strng)
     {
-        if (strng.Length >= 2 && strng[^2] == '`')
-            strng = strng[..strng.IndexOf('`')];
-        return strng;
-    }
+        if (strng.Length >= 2 && strng[^2] == '`') //i had such a dumb bug with this
+            strng = strng[..^2];  //i was wondering why indexing ^2 was throwing, i thought i was returning the index itself and not the actual char struct
+        return strng;           //even though i do it right there infront of my own eyes string[^2] == '`'
+    }                           // supposed to index ..^2 like this...
 
     static void AddGenericArguments(StringBuilder sb, Type[]? genericargs)
     {

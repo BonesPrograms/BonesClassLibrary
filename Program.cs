@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Numerics;
 using System.Reflection;
@@ -12,16 +13,27 @@ using HarmonyLib;
 new ILReader(AccessTools.Method(typeof(Test), "Switching")).PrintIL();
 
 var data = Metadata.MetadataMap(typeof(Test).Module);
-foreach(var obj in data)
+foreach (var obj in data)
 {
-    Console.WriteLine("\nREADING TYPE!");
-    Console.WriteLine(obj.Key);
-    foreach(var ob in obj.Value)
-    Console.WriteLine(ob);
+    if (obj.EqualsOrIsDeclaredIn(typeof(ValueTupleFix)))
+        Console.WriteLine(obj);
+}
+
+class ValueTupleFix
+{
+    private ConcurrentDictionary<(int, Module), Metadata> _test;
+}
+
+class Base<T>
+{
+
+}
+class Inheritance : Base<Test>
+{
+
 }
 class Test
 {
-
     public int Switching() //im not seeing hte 'swithc' opcode!!!!! check my other switches
     {
         int vibe = 5;
@@ -39,16 +51,16 @@ class Test
             _ => default
         };
     }
-    public void Method() //this is for researching how to fix uints not displaying properly in my IL
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
+    void UnsignedInts()
     {
-        short shorter = 32424;
+
         uint unsigned = uint.MaxValue;
         uint unsigned6 = 4294967295;
         uint unsigned2 = 4294967294;
         uint unsigned87 = 4294967293;
         uint insigned3 = 3294977294;
         uint insigned4 = 999999999;
-        int signed0 = int.MaxValue;
-        int signed = 2147483647;
     }
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
 }

@@ -4,30 +4,12 @@ using BonesClassLibrary.FileFinders;
 using System.Buffers.Binary;
 using System.Text;
 using static BonesClassLibrary.Bytes.ByteReader;
+using HarmonyLib;
 
 namespace BonesClassLibrary.Reflection;
 
+//Todo: Reading delegates, reading delegate bodies?
 
-
-// You use the OperandType to determine how many bytes to read to get the meaningful data (the token or offset).
-// Identify the Opcode (e.g., ldfld, call).
-// Check OperandType to see if it needs 1, 2, 4, or 8 bytes of data.
-// Read those bytes using BitConverter.
-// Use the result:
-// For call/ldfld: The result is a Metadata Token (int). You pass this to Module.ResolveMethod(token) or Module.ResolveField(token) to get the actual MethodInfo or FieldInfo.
-// For brfalse: The result is a Relative Offset. You add it to the current position to find the target label.
-
-// Yes, you are missing several common operand types. Your current code will return null for jumps, variables, arguments, and floating-point numbers, causing you to lose that data. 
-
-// Here are the critical cases you need to add:
-
-// Branches (Jumps): InlineBrTarget (4 bytes) and ShortInlineBrTarget (1 byte). These are crucial for if, while, and foreach logic.
-// Variables & Arguments: InlineVar (2 bytes) and ShortInlineVar (1 byte) for locals (ldloc), plus InlineArg and ShortInlineArg for arguments (ldarg).
-// Floating Point: InlineR (8 bytes) and ShortInlineR (4 bytes) for double and float constants.
-// Long Integers: InlineI8 (8 bytes) for long constants.
-// Switch: InlineSwitch (variable length) for switch statements.
-
-//See Mono.Reflection.MethodBodyReader to learn more about reading method bodies! and Mono.Reflection.Instruction for instruction learning
 
 //learn wtf an offset is in IL
 
@@ -40,8 +22,8 @@ namespace BonesClassLibrary.Reflection;
 public sealed class ILReader
 {
     public readonly IReadOnlyList<byte> RawBytes;
-    readonly IList<LocalVariableInfo> Locals;
-    readonly ParameterInfo[] Params;
+    public readonly IList<LocalVariableInfo> Locals;
+    public readonly ParameterInfo[] Params;
     readonly Module Module;
     readonly MethodInfo Method;
     /// <summary>
