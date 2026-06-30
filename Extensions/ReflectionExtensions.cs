@@ -5,5 +5,9 @@ namespace BonesClassLibrary.Extensions;
 
 public static class ReflectionExtensions
 {
-    public static Metadata AsMetadata(this MemberInfo info) => Metadata.Get(info);
+    public static Metadata AsMetadata<T>(this T obj) where T : class
+    {
+        MemberInfo info = obj is MemberInfo inf ? inf : obj.GetType();
+        return new(info);
+    }
 }

@@ -1,3 +1,4 @@
+using static BonesClassLibrary.Bytes.ByteReader;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
@@ -36,16 +37,16 @@ public sealed class Metadata : MetadataReader
     public int IntToken => Info.MetadataToken;
     public string Name => Info.Name; //may change this to be info.tostring() for type objects (so you can see the namespace), not sure how that will effect methodinfo objects tho
     public readonly MetadataType MetadataType; //mostly for querying - you have options, can search metadata maps by metadatatype/name, or can search them by their info object
-                                               //using the method Metadata.Represents(MemberInfo)
+                                               //using the equals overlaod
     /// <summary>
     /// 32bit byte sequence of the MetadataToken.
     /// </summary>
     public readonly ImmutableArray<byte> ByteToken;
     readonly Type? Declared;
     readonly Type? Base;
-    Metadata(MemberInfo info) : base(info)
+    public Metadata(MemberInfo info) : base(info)
     {
-        byte[] bytes = new byte[4];
+        byte[] bytes = new byte[x32bit];
         BinaryPrimitives.WriteInt32LittleEndian(bytes, info.MetadataToken);
         ByteToken = [.. bytes];
         MetadataType = GetMetadataType(info);
@@ -53,6 +54,7 @@ public sealed class Metadata : MetadataReader
         if (info is Type type)
             Base = type.BaseType;
     }
+
 
 
     /// these methods are helpers for navigating a MetadataMap -
@@ -68,25 +70,11 @@ public sealed class Metadata : MetadataReader
     }
     public bool DeclaredIn(Metadata data)
     {
-        return DeclaredIn(data.Declared);
+        return data.Declared != null && DeclaredIn(data.Declared);
     }
-    public bool DeclaredIn(Type? type)
+    public bool DeclaredIn(Type type)
     {
-        if (type == null)
-            return false;
         return Declared?.HasSameMetadataDefinitionAs(type) ?? false;
-    }
-
-    /// <summary>
-    /// Get metadata from a class object. Can also be used to wrap MemberInfo objects.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="obj"></param>
-    /// <returns></returns>
-    public static Metadata Get<T>(T obj) where T : class
-    {
-        MemberInfo info = obj is MemberInfo inf ? inf : obj.GetType();
-        return new(info);
     }
 
     /// <summary>
@@ -102,20 +90,27 @@ public sealed class Metadata : MetadataReader
 
     }
     /// <summary>
-    /// Casts the memberinfo object to whatever descendant class you need.
+    /// Pattern matches the memberinfo object and returns the object or null if the match fails.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public T? CastInfoTo<T>() where T : MemberInfo => Info as T;
+    public T? InfoAs<T>(bool throwOnFail = true) where T : MemberInfo
+    {
+        if (Info is not T)
+        {
+            return throwOnFail ? throw new ArgumentException($"Info is not {typeof(T).Name}") : null;
+        }
+        return Info as T;
+    }
 
     /// <summary>
-    /// Casts the memberinfo object to whatever descendant class you need.
+    /// Pattern matches the memberinfo object and returns false if the match fails.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public bool CastInfoTo<T>(out T? obj) where T : MemberInfo
+    public bool InfoAs<T>(out T? obj) where T : MemberInfo
     {
-        obj = CastInfoTo<T>();
+        obj = InfoAs<T>(false);
         return obj != null;
     }
     public override int GetHashCode()
@@ -200,7 +195,7 @@ public sealed class Metadata : MetadataReader
     {
         foreach (T obj in array)
         {
-            metadata.Add(Get(obj));
+            metadata.Add(new(obj));
         }
     }
 
@@ -241,27 +236,24 @@ public sealed class Metadata : MetadataReader
     {
         StringBuilder sb = new();
         AccessModifiers(sb, new AccessModifiers(field));
-        if (field.IsStatic && field.IsLiteral)
-            sb.Append("static ");
-        else if (field.IsLiteral)
+        if (field.IsLiteral)
             sb.Append("const ");
+        else if (field.IsStatic)
+            sb.Append("static ");
         return sb;
 
     }
 
-    static StringBuilder MethodToString(MethodBase mthd)
+    StringBuilder MethodToString(MethodBase mthd)
     {
         StringBuilder sb = new();
         AccessModifiers(sb, new AccessModifiers(mthd));
         if (mthd.IsStatic)
-        {
-            sb.Append("static ");
             return sb;
-        }
         bool isoverride = false;
-        if (mthd is MethodInfo realmethod)
+        if (Declared != null && mthd is MethodInfo realmethod)
         {
-            if (realmethod.DeclaringType != realmethod.GetBaseDefinition().DeclaringType)
+            if (Declared != realmethod.GetBaseDefinition().DeclaringType)
             {
                 sb.Append("override ");
                 isoverride = true;
@@ -291,6 +283,8 @@ public sealed class Metadata : MetadataReader
         else if (access.IsFamilyOrAssembly)
             sb.Append("protected internal ");
     }
+
+    //also maybe should add stuff that says if it is public, internal, nested private
     static StringBuilder TypeToString(Type type) //need to add stuff for nested types i think
     {
         StringBuilder sb = new();

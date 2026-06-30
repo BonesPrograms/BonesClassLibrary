@@ -80,7 +80,7 @@ public static class NumericExtensions
                     WriteInt64LittleEndian(bytes, sint32or64);
                 }
                 else
-                    throw new PlatformNotSupportedException("Must be x32 or x64");
+                    throw new PlatformNotSupportedException("Must be 32bit or 64bit process");
                 break;
             case nuint uint32or64:
                 if (!Environment.Is64BitProcess)
@@ -94,7 +94,7 @@ public static class NumericExtensions
                     WriteUInt64LittleEndian(bytes, uint32or64);
                 }
                 else
-                    throw new PlatformNotSupportedException("Must be x32 or x64");
+                    throw new PlatformNotSupportedException("Must be 32bit or 64bit process");
                 break;
         }
         if (bytes.Length == 0)

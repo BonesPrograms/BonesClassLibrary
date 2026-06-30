@@ -21,7 +21,7 @@ namespace BonesClassLibrary.Reflection;
 /// </summary>
 public sealed class ILReader
 {
-    public readonly IReadOnlyList<byte> RawBytes;
+    public readonly IReadOnlyList<byte> Bytes;
     public readonly IList<LocalVariableInfo> Locals;
     public readonly ParameterInfo[] Params;
     readonly Module Module;
@@ -37,7 +37,7 @@ public sealed class ILReader
     {
         MethodBody body = method.GetMethodBody() ?? throw new ArgumentException("Method body is null.");
         IL = body?.GetILAsByteArray() ?? throw new ArgumentException("Byte array is null.");
-        RawBytes = IL.AsReadOnly();
+        Bytes = IL.AsReadOnly();
         Locals = body.LocalVariables;
         Params = method.GetParameters();
         Module = method.Module;
@@ -84,9 +84,9 @@ public sealed class ILReader
     {
         OpCode code = GetOpCode(ref i);
         int size = OperandSize(code.OperandType);
-        var token = GetToken(i, ref size, code.OperandType);
+        object token = GetToken(i, ref size, code.OperandType);
         object? operand = size == x0bit ? null : GetOperand(code, token, i);
-        codes.Add(new(code, operand, i - 1)); //for some reason it is off by 1, you want to shift the offset back by 1 or every label will be off by 1 individually and cumulatively so all labels will be off
+        codes.Add(new(code, operand, i - 1, token)); //for some reason it is off by 1, you want to shift the offset back by 1 or every label will be off by 1 individually and cumulatively so all labels will be off
         i += size;
     }
 
