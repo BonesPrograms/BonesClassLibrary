@@ -32,6 +32,8 @@ foreach (var obj in data)
 
 //i can confirm though that CUSTOM structs are tokenized, im not sure about custom valuetuples tho, but defined structs are tokenized
 
+//test br jump targets - they should show their operand as bytes... but it may not work if the operand is a byte index instead of an int index
+
 class ValueTupleFix
 {
     private ConcurrentDictionary<(int, Module), Metadata> _test;

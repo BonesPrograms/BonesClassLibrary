@@ -35,18 +35,23 @@ public sealed class ByteCode : MetadataReader
     {
         OpCode = opcode;
         Offset = offset;
-        if ((operand is not null and not LocalVariableInfo and not ParameterInfo) && TokenDoesntEqualOperand(operand, token))
+        if (operand is not null and not LocalVariableInfo and not ParameterInfo)
         {
-            Token = token;
-            _bytes = [.. TokenToBytes(token)];
-            Bytes = _bytes.AsReadOnly();
+            if (TokenDoesntEqualOperand(operand, token)) //if token and operand are equal this means you are receiving a raw numeric value
+                Token = token;  //which is not a metadata token
+            byte[]? bytes = TokenToBytes(token);  //however it still has operand bytes so we retrieve the operand bytes
+            if (BytesDontEqualToken(bytes, operand) && bytes != null)
+            {
+                _bytes = [.. bytes];
+                Bytes = _bytes.AsReadOnly();
+            }
         }
     }
 
-    static byte[] TokenToBytes(object token)
+    static byte[]? TokenToBytes(object token)
     {
         if (token is byte bits && bits == x0bit)
-            return [];
+            return null;
         switch (token)
         {
             case byte x8bits:
@@ -77,19 +82,40 @@ public sealed class ByteCode : MetadataReader
         sb.Append(' ');
         sb.Append(OperandToString());
         sb.Append(" || ");
-        sb.Append(" OpCode Bytes: ");
+        sb.Append(" OpCodeBytes: ");
         sb.Append(BytesToString(OpCode.Value.AsBytes()));
         if (Bytes != null)
         {
-            sb.Append($":: Token: {Token} ");
-            sb.Append($"AsBytes: ");
+            if (Token != null)
+                sb.Append($" :: Token: {Token} ");
+            sb.Append(' ');
+            sb.Append(Token == null ? "Operand" : "Token");
+            sb.Append("Bytes: ");
             sb.Append(BytesToString(_bytes!));
         }
         return sb;
     }
-
+    static bool BytesDontEqualToken(byte[]? bytes, object operand)
+    {
+        if (bytes?.Length == 1)
+        {
+            if (operand is byte bits)
+            {
+                if (bytes[0] == bits)
+                    return false;
+            }
+            else if (operand is int intgr) //check for short too?
+            {
+                if (bytes[0] == intgr)
+                    return false;
+            }
+        }
+        return true;
+    }
     static bool TokenDoesntEqualOperand(object? operand, object token)
     {
+        if (operand == null)
+            return true;
         if (operand is short shrt && token is short sht)
             return shrt != sht;
         else if (operand is int intgr && token is int tkn)
