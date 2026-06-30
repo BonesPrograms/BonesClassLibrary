@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using BonesClassLibrary.Extensions;
 using static BonesClassLibrary.Bytes.ByteReader;
+using System.ComponentModel;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -33,17 +34,19 @@ public sealed class ByteCode : MetadataReader
     public readonly int Offset;
     public readonly OpCode OpCode;
     public object? Operand => Object;
-    public readonly object? Token;
+    public readonly int? Token; //MetadataToken
     public readonly IReadOnlyList<byte>? OperandBytes;
     readonly byte[]? _bytes;
+    public readonly bool HasOperand; //this does not mean that OperandBytes is not null, it just means this opcode has an operand - if bytes are null, this implies a single byte operand
     internal ByteCode(OpCode opcode, object? operand, int offset, object token) : base(operand)
     {
         OpCode = opcode;
         Offset = offset;
         if (operand is not null and not LocalVariableInfo and not ParameterInfo)
         {
+            HasOperand = true;
             if (TokenDoesntEqualOperand(operand, token)) //if token and operand are equal this means you are receiving a raw numeric value
-                Token = token;  //which is not a metadata token
+                Token = (int)token;  //which is not a metadata token
             byte[]? bytes = TokenToBytes(token);  //however it still has operand bytes so we retrieve the operand bytes
             if (bytes != null && BytesDontEqualOperand(bytes, operand)) //but id rather not display the bytes if the operand's value can be represented in a single byte
             {
@@ -53,30 +56,16 @@ public sealed class ByteCode : MetadataReader
         }
     }
 
-    static byte[]? TokenToBytes(object token)
+    static byte[]? TokenToBytes(object token) => token switch
     {
-        if (token is byte bits && bits == x0bit)
-            return null;
-        switch (token)
-        {
-            case byte x8bits:
-                {
-                    byte[] bytes = [x8bits];
-                    return bytes;
-                }
-            case short int16:
-                return int16.AsBytes();
-            case int int32:
-                return int32.AsBytes();
-            case float float32:
-                return float32.AsBytes();
-            case long int64:
-                return int64.AsBytes();
-            case double float64:
-                return float64.AsBytes();
-        }
-        return [];
-    }
+        short int16 => int16.AsBytes(),
+        int int32 => int32.AsBytes(),
+        float float32 => float32.AsBytes(),
+        long int64 => int64.AsBytes(),
+        double float64 => float64.AsBytes(),
+        _ => null
+    };
+    
     protected override StringBuilder ToStringBuilder()
     {
         StringBuilder sb = new();
@@ -113,7 +102,7 @@ public sealed class ByteCode : MetadataReader
                 if (bytes[0] == bits)
                     return false;
             }
-            else if (operand is int intgr) //check for short too?
+            else if (operand is int intgr) //check for short too? no i think this only needs to be byte based - this is for chars?
             {
                 if (bytes[0] == intgr)
                     return false;
