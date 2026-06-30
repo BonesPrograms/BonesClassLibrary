@@ -25,11 +25,16 @@ public static class OpCodeMap
 /// </summary>
 public sealed class ByteCode : MetadataReader
 {
+#pragma warning disable CA2211 // Non-constant fields should not be visible
+    public static bool ShowOpCodeBytes = true;
+    public static bool ShowOperandBytes = true;
+
+#pragma warning restore CA2211 // Non-constant fields should not be visible
     public readonly int Offset;
     public readonly OpCode OpCode;
     public object? Operand => Object;
-    public readonly IReadOnlyList<byte>? Bytes;
     public readonly object? Token;
+    public readonly IReadOnlyList<byte>? OperandBytes;
     readonly byte[]? _bytes;
     internal ByteCode(OpCode opcode, object? operand, int offset, object token) : base(operand)
     {
@@ -40,10 +45,10 @@ public sealed class ByteCode : MetadataReader
             if (TokenDoesntEqualOperand(operand, token)) //if token and operand are equal this means you are receiving a raw numeric value
                 Token = token;  //which is not a metadata token
             byte[]? bytes = TokenToBytes(token);  //however it still has operand bytes so we retrieve the operand bytes
-            if (BytesDontEqualToken(bytes, operand) && bytes != null)
+            if (bytes != null && BytesDontEqualOperand(bytes, operand)) //but id rather not display the bytes if the operand's value can be represented in a single byte
             {
                 _bytes = [.. bytes];
-                Bytes = _bytes.AsReadOnly();
+                OperandBytes = _bytes.AsReadOnly();
             }
         }
     }
@@ -81,10 +86,14 @@ public sealed class ByteCode : MetadataReader
             sb.Append(" instance void");
         sb.Append(' ');
         sb.Append(OperandToString());
-        sb.Append(" || ");
-        sb.Append(" OpCodeBytes: ");
-        sb.Append(BytesToString(OpCode.Value.AsBytes()));
-        if (Bytes != null)
+        if (ShowOpCodeBytes || ShowOperandBytes)
+            sb.Append(" || ");
+        if (ShowOpCodeBytes)
+        {
+            sb.Append(" OpCodeBytes: ");
+            sb.Append(BytesToString(OpCode.Value.AsBytes()));
+        }
+        if (OperandBytes != null && ShowOperandBytes)
         {
             if (Token != null)
                 sb.Append($" :: Token: {Token} ");
@@ -95,7 +104,7 @@ public sealed class ByteCode : MetadataReader
         }
         return sb;
     }
-    static bool BytesDontEqualToken(byte[]? bytes, object operand)
+    static bool BytesDontEqualOperand(byte[]? bytes, object operand)
     {
         if (bytes?.Length == 1)
         {
