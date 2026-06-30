@@ -35,7 +35,7 @@ public sealed class ByteCode : MetadataReader
     {
         OpCode = opcode;
         Offset = offset;
-        if (Operand is not LocalVariableInfo && Operand is not ParameterInfo && TokenDoesntEqualOperand(operand, token))
+        if ((operand is not null and not LocalVariableInfo and not ParameterInfo) && TokenDoesntEqualOperand(operand, token))
         {
             Token = token;
             _bytes = [.. TokenToBytes(token)];
@@ -90,8 +90,6 @@ public sealed class ByteCode : MetadataReader
 
     static bool TokenDoesntEqualOperand(object? operand, object token)
     {
-        if (operand == null)
-            return false;
         if (operand is short shrt && token is short sht)
             return shrt != sht;
         else if (operand is int intgr && token is int tkn)
