@@ -5,6 +5,7 @@ using System.Buffers.Binary;
 using System.Text;
 using static BonesClassLibrary.Bytes.ByteReader;
 using HarmonyLib;
+using System.Collections.Immutable;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -33,6 +34,7 @@ public sealed class ILReader
     readonly byte[] IL;
     readonly Type[]? GenericMethodArgs;
     readonly Type[]? GenericTypeArgs;
+    ByteCode? LastInstruction;
     public ILReader(MethodInfo method)
     {
         MethodBody body = method.GetMethodBody() ?? throw new ArgumentException("Method body is null.");
@@ -71,13 +73,13 @@ public sealed class ILReader
     /// Returns a list of readable IL.
     /// </summary>
     /// <returns></returns>
-    public List<ByteCode> GetIL()
+    public ImmutableArray<ByteCode> GetIL()
     {
         int i = 0;
         List<ByteCode> codes = [];
         while (i < IL.Length)
             BytesToIL(codes, ref i);
-        return codes;
+        return [.. codes];
     }
 
     void BytesToIL(List<ByteCode> codes, ref int i)
@@ -86,8 +88,12 @@ public sealed class ILReader
         int size = OperandSize(code.OperandType);
         object token = GetToken(i, ref size, code.OperandType);
         object? operand = size == x0bit ? null : GetOperand(code, token, i);
-        codes.Add(new(code, operand, i - 1, token)); //for some reason it is off by 1, you want to shift the offset back by 1 or every label will be off by 1 individually and cumulatively so all labels will be off
+        ByteCode instruction = new(code, operand, i - 1, token);
+        codes.Add(instruction); //for some reason it is off by 1, you want to shift the offset back by 1 or every label will be off by 1 individually and cumulatively so all labels will be off
         i += size;
+        instruction.LastInstruction = LastInstruction;
+        LastInstruction?.NextInstruction = instruction;
+        LastInstruction = instruction;
     }
 
     OpCode GetOpCode(ref int i)
@@ -97,7 +103,8 @@ public sealed class ILReader
         if (indexedbyte == PrefixBit)
         {
             byte nextbyte = IL[i + 1];
-            short key = (short)((PrefixBit << 0x08) | nextbyte); //learn how to do bitwise!
+            //short key = BinaryPrimitives.ReadInt16LittleEndian(IL.AsSpan(i, x16bit));
+              short key = (short)((PrefixBit << 0x08) | nextbyte); //learn how to do bitwise!
             code = OpCodeMap.OpCodes[key];
             i += 2;
         }
@@ -128,7 +135,7 @@ public sealed class ILReader
         if (size == x0bit)
             return x0bit; //no operand
         else if (size == x8bit)
-            return IL[i]; 
+            return IL[i];
         else if (size == x16bit)
             return BinaryPrimitives.ReadInt16LittleEndian(IL.AsSpan(i, x16bit)); //BitConverter works, but BinaryPrimitives will automatically handle it without us
         else if (size == x32bit)                                       //having to reverse the bytes to get their token on BigEndian systems
@@ -155,8 +162,8 @@ public sealed class ILReader
     =>
         code.OperandType switch
         {
-            OperandType.ShortInlineBrTarget=>(byte)token + i + 1,
-            OperandType.ShortInlineI => (byte)token,
+            OperandType.ShortInlineBrTarget => (sbyte)(byte)token + i + 1,
+            OperandType.ShortInlineI => (sbyte)(byte)token,
             OperandType.InlineI => (int)token,
             OperandType.ShortInlineR => (float)token,
             OperandType.InlineR => (double)token,

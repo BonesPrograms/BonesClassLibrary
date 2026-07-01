@@ -1,42 +1,31 @@
 using System.Reflection;
 using BonesClassLibrary.Reflection;
 using System.Collections.Immutable;
+using System.Collections;
 
-namespace Bones.Collections;
-
-
-///Mission plan:
-/// Metadata.MetadataMap returns a Dictionary with a Type Key that has a List Collection
-/// Collections inside of collections are annoying
-/// Were going to make it require one less foreach look to be able to reach the value by making our own better enumerator
-/// 
-/// 
-
-///Map format: declared only
-/// 
-
-
+namespace BonesClassLibrary.Reflection.Collections;
 
 
 /// <summary>
-/// Dictionary wrapper that supports indexing by metadata or by memberinfo. Simplifies enumeration by dumping out Type objects and then following that with all of the type's
-/// members before moving on to the next type object.
+/// Wrapper class that simplifies enumerating a collection that is inside of a collection. Each key is a Type's GUID. Each array stores a Type object followed
+/// by it's members.
 /// </summary>
-public sealed class MetadataMap : IEnumerable<Metadata>
+
+public sealed class MetadataMap : IEnumerable<Metadata>, IEnumerable
 {
-    public readonly ImmutableDictionary<MemberInfo, ImmutableList<Metadata>> MemberInfoDictionary;
-    public readonly ImmutableDictionary<Metadata, ImmutableList<Metadata>> MetadataDictionary;
-    public MetadataMap(Dictionary<Metadata, ImmutableList<Metadata>> data)
+    public readonly Module Module;
+    public Guid ID => Module.ModuleVersionId;
+    readonly ImmutableDictionary<Guid, ImmutableArray<Metadata>> Data;
+    MetadataMap(Dictionary<Guid, ImmutableArray<Metadata>> data)
     {
-        MemberInfoDictionary = data.ToImmutableDictionary(x => x.Key.Info, y => y.Value);
-        MetadataDictionary = data.ToImmutableDictionary();
+        Module = data.First().Value.First().Module;
+        Data = data.ToImmutableDictionary();
     }
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+    IEnumerator IEnumerable.GetEnumerator()
     {
-        foreach (var pair in MetadataDictionary)
+        foreach (var pair in Data)
         {
-            yield return pair.Key;
             foreach (var element in pair.Value)
             {
                 yield return element;
@@ -46,25 +35,49 @@ public sealed class MetadataMap : IEnumerable<Metadata>
 
     public IEnumerator<Metadata> GetEnumerator()
     {
-        foreach (var pair in MetadataDictionary)
+        return GetEnumerator();
+    }
+
+
+    public ImmutableArray<Metadata> this[Type index]
+    {
+        get => Data[index.GUID];
+    }
+    /// <summary>
+    /// Maps all the metadata in a module to a dictionary, keyed by type with a list of all the type's members in metadata format.
+    /// </summary>
+    /// <param name="m"></param>
+    /// <returns></returns>
+    public static MetadataMap New(Module m)
+    {
+        Dictionary<Guid, ImmutableArray<Metadata>> metadata = [];
+        ResolveAllMetadata(metadata, m.GetTypes());
+        return new MetadataMap(metadata);
+
+    }
+    static void ResolveAllMetadata(Dictionary<Guid, ImmutableArray<Metadata>> metadata, Type[] types)
+    {
+        const BindingFlags allDeclared = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        foreach (var type in types)
         {
-            yield return pair.Key;
-            foreach (var element in pair.Value)
-            {
-                yield return element;
-            }
+            List<Metadata> typedata = [];
+            typedata.Add(new(type));
+            GetMetadataOf(typedata, type.GetProperties(allDeclared));
+            GetMetadataOf(typedata, type.GetFields(allDeclared));
+            GetMetadataOf(typedata, type.GetConstructors(allDeclared));
+            GetMetadataOf(typedata, type.GetMethods(allDeclared));
+            GetMetadataOf(typedata, type.GetEvents(allDeclared));
+            //  GetMetadataOf(metadata, type.GetMembers(Default));
+            metadata[type.GUID] = [.. typedata];
         }
     }
 
-
-    public ImmutableList<Metadata> this[MemberInfo index]
+    static void GetMetadataOf<T>(List<Metadata> metadata, T[] array) where T : MemberInfo
     {
-        get => MemberInfoDictionary[index];
-    }
-
-    public ImmutableList<Metadata> this[Metadata index]
-    {
-        get => MetadataDictionary[index];
+        foreach (T obj in array)
+        {
+            metadata.Add(new(obj));
+        }
     }
 
 

@@ -6,6 +6,7 @@ using System.Numerics;
 using BonesClassLibrary.Extensions;
 using static BonesClassLibrary.Bytes.ByteReader;
 using System.ComponentModel;
+using BonesClassLibrary.Bytes;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -27,31 +28,55 @@ public static class OpCodeMap
 public sealed class ByteCode : MetadataReader
 {
 #pragma warning disable CA2211 // Non-constant fields should not be visible
-    public static bool ShowOpCodeBytes = true;
+    public static bool ShowOpCodeBytes = false;
     public static bool ShowOperandBytes = true;
+    public static bool ShowOperandType = false;
 
 #pragma warning restore CA2211 // Non-constant fields should not be visible
-    public readonly int Offset;
+    readonly int Offset; //this is kind of fucking useless to end users right now, since this isnt really part of some sort of reflection.emit system. emit.label?
     public readonly OpCode OpCode;
     public object? Operand => Object;
     public readonly int? Token; //MetadataToken
     public readonly IReadOnlyList<byte>? OperandBytes;
     readonly byte[]? _bytes;
     public readonly bool HasOperand; //this does not mean that OperandBytes is not null, it just means this opcode has an operand - if bytes are null, this implies a single byte operand
+                                     //or a local variable / paramete
+    public ByteCode? LastInstruction
+    {
+        get => _lastInstruction;
+        internal set
+        {
+            _lastInstruction ??= value;
+        }
+    }
+
+    public ByteCode? NextInstruction
+    {
+        get => _nextInstruction;
+        internal set
+        {
+            _nextInstruction ??= value;
+        }
+    }
+    ByteCode? _lastInstruction;
+    ByteCode? _nextInstruction;
     internal ByteCode(OpCode opcode, object? operand, int offset, object token) : base(operand)
     {
         OpCode = opcode;
         Offset = offset;
+        HasOperand = operand is not null;
         if (operand is not null and not LocalVariableInfo and not ParameterInfo)
         {
-            HasOperand = true;
-            if (TokenDoesntEqualOperand(operand, token)) //if token and operand are equal this means you are receiving a raw numeric value
-                Token = (int)token;  //which is not a metadata token
-            byte[]? bytes = TokenToBytes(token);  //however it still has operand bytes so we retrieve the operand bytes
-            if (bytes != null && BytesDontEqualOperand(bytes, operand)) //but id rather not display the bytes if the operand's value can be represented in a single byte
+            if (token is int integer && Operand is not ValueType)
+                Token = integer;
+            if (Operand is not sbyte)
             {
-                _bytes = [.. bytes];
-                OperandBytes = _bytes.AsReadOnly();
+                byte[]? bytes = TokenToBytes(token);
+                if (bytes != null)
+                {
+                    _bytes = [.. bytes];
+                    OperandBytes = _bytes.AsReadOnly();
+                }
             }
         }
     }
@@ -65,17 +90,19 @@ public sealed class ByteCode : MetadataReader
         double float64 => float64.AsBytes(),
         _ => null
     };
-    
+
     protected override StringBuilder ToStringBuilder()
     {
         StringBuilder sb = new();
         sb.Append($"IL_{Offset:x4}: ");
         sb.Append(OpCode.ToString());
+        if (ShowOperandType)
+            sb.Append($" {OpCode.OperandType}");
         if (Object is ConstructorInfo)
             sb.Append(" instance void");
         sb.Append(' ');
-        sb.Append(OperandToString());
-        if (ShowOpCodeBytes || ShowOperandBytes)
+        OperandToString(sb);
+        if ((ShowOpCodeBytes) || (ShowOperandBytes && (Token != null || OperandBytes != null)))
             sb.Append(" || ");
         if (ShowOpCodeBytes)
         {
@@ -93,38 +120,6 @@ public sealed class ByteCode : MetadataReader
         }
         return sb;
     }
-    static bool BytesDontEqualOperand(byte[]? bytes, object operand)
-    {
-        if (bytes?.Length == 1)
-        {
-            if (operand is byte bits)
-            {
-                if (bytes[0] == bits)
-                    return false;
-            }
-            else if (operand is int intgr) //check for short too? no i think this only needs to be byte based - this is for chars?
-            {
-                if (bytes[0] == intgr)
-                    return false;
-            }
-        }
-        return true;
-    }
-    static bool TokenDoesntEqualOperand(object? operand, object token)
-    {
-        if (operand == null)
-            return true;
-        if (operand is short shrt && token is short sht)
-            return shrt != sht;
-        else if (operand is int intgr && token is int tkn)
-            return intgr != tkn;
-        else if (operand is byte bits && token is byte bitz)
-            return bits != bitz;
-        else if (operand is long lng && token is long lngr)
-            return lng != lngr;
-        return true;
-    }
-
     static StringBuilder BytesToString(byte[] bytes)
     {
         StringBuilder sb = new();
@@ -132,17 +127,30 @@ public sealed class ByteCode : MetadataReader
             sb.Append($"{bytes[i]} ");
         return sb;
     }
-    StringBuilder OperandToString()
+    void OperandToString(StringBuilder sb)
     {
-
-        if (OpCode.OperandType == OperandType.InlineBrTarget || OpCode.OperandType == OperandType.ShortInlineBrTarget)
+        if (Operand is LocalVariableInfo lvar)
         {
-            int num = (int)Operand!; //jump target offsets are max 32bit and will never be null
-            return new StringBuilder($"IL_{num:x4}");
+            Type type = lvar.LocalType;
+            sb.Append($"{CheckTypeGenerics(type)} ({lvar.LocalIndex})");
+        }
+        else if (Operand is ParameterInfo info)
+        {
+            Type type = info.ParameterType;
+            sb.Append(CheckTypeGenerics(type) + $" {info.Name}");
+        }
+        else if (OpCode.OperandType == OperandType.InlineBrTarget || OpCode.OperandType == OperandType.ShortInlineBrTarget)
+        {
+            int num = 0;
+            if (Operand is sbyte bits)
+                num = bits;
+            else if (Operand is int integer)
+                num = integer;
+            sb.Append($"IL_{num:x4}");
         }
         else if (Object is string)
-            return new StringBuilder($"\"{Object}\"");
-        return base.ToStringBuilder();
-
+            sb.Append($"\"{Object}\"");
+        else
+            sb.Append(base.ToStringBuilder());
     }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 
 namespace BonesClassLibrary.Reflection;
 
@@ -30,7 +31,7 @@ public readonly struct AccessModifiers
         IsFamilyOrAssembly = field.IsFamilyOrAssembly;
     }
 
-    public AccessModifiers(MethodBase mthd) 
+    public AccessModifiers(MethodBase mthd)
     {
         IsPublic = mthd.IsPublic;
         IsPrivate = mthd.IsPrivate;
@@ -38,5 +39,21 @@ public readonly struct AccessModifiers
         IsFamily = mthd.IsFamily;
         IsFamilyAndAssembly = mthd.IsFamilyAndAssembly;
         IsFamilyOrAssembly = mthd.IsFamilyOrAssembly;
+    }
+    public override string ToString()
+    {
+        if (IsPublic)
+            return "public";
+        else if (IsFamily)
+            return "protected";
+        else if (IsPrivate)
+            return "private";
+        else if (IsAssembly)
+            return "internal";
+        else if (IsFamilyAndAssembly)
+            return "private protected";
+        else if (IsFamilyOrAssembly)
+            return "protected internal"; //this should literally never throw
+        throw new InvalidOperationException("FieldInfo or MethodBase object has invalid access modifiers.");
     }
 }

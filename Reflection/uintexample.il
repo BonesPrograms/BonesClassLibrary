@@ -36,10 +36,3 @@
 	IL_0027: ret
 } // end of method Test::Method
 
-//uint plan: so i think the issue is that im casting the byte to an int and maybe i should use a byteconverter, but i should only use that if i am seeing
-//specific opcodes? idk ldci4s and stloc are normal opcodes lol
-
-
-//fix - i made sure all 8 bit operands are casted as bytes, well see if that works
-//speaking of which, i am pretty sure i fixed the jump label bug by casting to object, but i think that the bug may reppaear
-//for 8 bit jumps, so i should probably make a separate operand result for an 8 bit jump that casts to byte - i need to test that and see how that works

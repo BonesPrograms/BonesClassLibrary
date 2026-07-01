@@ -4,54 +4,38 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text;
-using Bones.Collections;
+using BonesClassLibrary.Reflection.Collections;
 
 namespace BonesClassLibrary.Reflection;
 
 
-public enum MetadataType
-{
-    Member,
-    Class,
-    Struct,
-    Interface,
-    Field,
-    Property,
-    Method,
-    Event,
-    Constructor,
-    Enum,
-    Array,
-    Collection,
-    Delegate
-}
+
 
 /// <summary>
-/// Multiton wrapper for a metadata object. Primarily exists to return readable and informative strings about the metadata.
+/// Wrapper for a metadata object. Primarily exists to return readable and informative strings about the metadata.
 /// </summary>
 
 public sealed class Metadata : MetadataReader
 {
     public MemberInfo Info => (MemberInfo)Object!;
     public Module Module => Info.Module;
-    public int IntToken => Info.MetadataToken;
+    public Guid ModuleID => Module.ModuleVersionId;
+    public int MetadataToken => Info.MetadataToken;
     public string Name => Info.Name; //may change this to be info.tostring() for type objects (so you can see the namespace), not sure how that will effect methodinfo objects tho
-    public readonly MetadataType MetadataType; //mostly for querying - you have options, can search metadata maps by metadatatype/name, or can search them by their info object
-                                               //using the equals overlaod
+  
     /// <summary>
     /// 32bit byte sequence of the MetadataToken.
     /// </summary>
-    public readonly ImmutableArray<byte> ByteToken;
+    public readonly ImmutableArray<byte> TokenAsBytes;
     readonly Type? Declared;
     readonly Type? Base;
     public Metadata(MemberInfo info) : base(info)
     {
         byte[] bytes = new byte[x32bit];
         BinaryPrimitives.WriteInt32LittleEndian(bytes, info.MetadataToken);
-        ByteToken = [.. bytes];
-        MetadataType = GetMetadataType(info);
+        TokenAsBytes = [.. bytes];
         Declared = info.DeclaringType;
-        if (info is Type type)
+        if (info is Type type && type.BaseType != typeof(object))
             Base = type.BaseType;
     }
 
@@ -77,18 +61,7 @@ public sealed class Metadata : MetadataReader
         return Declared?.HasSameMetadataDefinitionAs(type) ?? false;
     }
 
-    /// <summary>
-    /// Maps all the metadata in a module to a dictionary, keyed by type with a list of all the type's members in metadata format.
-    /// </summary>
-    /// <param name="m"></param>
-    /// <returns></returns>
-    public static MetadataMap MetadataMap(Module m)
-    {
-        Dictionary<Metadata, ImmutableList<Metadata>> metadata = [];
-        ResolveAllMetadata(metadata, m.GetTypes());
-        return new MetadataMap(metadata);
 
-    }
     /// <summary>
     /// Pattern matches the memberinfo object and returns the object or null if the match fails.
     /// </summary>
@@ -113,9 +86,15 @@ public sealed class Metadata : MetadataReader
         obj = InfoAs<T>(false);
         return obj != null;
     }
+
+    /// <summary>
+    /// This allows you to index Metadata keys in dictionaries without having a reference to the specific instance in the dictionary. As long as they represent the same
+    /// MemberInfo object, they will be considered the same.
+    /// </summary>
+    /// <returns></returns>
     public override int GetHashCode()
     {
-        return HashCode.Combine(Info);
+        return Info.GetHashCode();
     }
 
 
@@ -140,13 +119,15 @@ public sealed class Metadata : MetadataReader
 
     public static bool operator ==(Metadata? data1, Metadata? data2)
     {
-        return data1?.Equals(data2?.Info) ?? data2 is null;
+        return data1?.Equals(data2) ?? data2 is null;
     }
 
     public override bool Equals(object? obj)
     {
         if (obj is MemberInfo info)
             return info.HasSameMetadataDefinitionAs(Info);
+        else if (obj is Metadata data)
+            return data.Info.HasSameMetadataDefinitionAs(Info);
         return false;
     }
     //i may add access modifiers - it would be easy, just put my access modifiers right before we call base.tostring()
@@ -166,38 +147,15 @@ public sealed class Metadata : MetadataReader
             sb.Append(" : ");
             sb.Append(CheckTypeGenerics(Base));
         }
-        sb.Append($" Token:: {IntToken}");
+        sb.Append($" Token:: {MetadataToken}");
         sb.Append(" AsBytes:: ");
-        foreach (var bits in ByteToken)
+        foreach (var bits in TokenAsBytes)
         {
             sb.Append($"{bits} ");
         }
         return sb;
     }
 
-    static void ResolveAllMetadata(Dictionary<Metadata, ImmutableList<Metadata>> metadata, Type[] types)
-    {
-        const BindingFlags allDeclared = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        foreach (var type in types)
-        {
-            List<Metadata> typedata = [];
-            GetMetadataOf(typedata, type.GetProperties(allDeclared));
-            GetMetadataOf(typedata, type.GetFields(allDeclared));
-            GetMetadataOf(typedata, type.GetMethods(allDeclared));
-            GetMetadataOf(typedata, type.GetConstructors(allDeclared));
-            GetMetadataOf(typedata, type.GetEvents(allDeclared));
-            //  GetMetadataOf(metadata, type.GetMembers(Default));
-            metadata[new(type)] = [.. typedata];
-        }
-    }
-
-    static void GetMetadataOf<T>(List<Metadata> metadata, T[] array) where T : MemberInfo
-    {
-        foreach (T obj in array)
-        {
-            metadata.Add(new(obj));
-        }
-    }
 
 
     StringBuilder? MetadataTypeToString() => Info switch
@@ -235,7 +193,7 @@ public sealed class Metadata : MetadataReader
     static StringBuilder FieldToString(FieldInfo field)
     {
         StringBuilder sb = new();
-        AccessModifiers(sb, new AccessModifiers(field));
+        sb.Append(new AccessModifiers(field).ToString() + ' ');
         if (field.IsLiteral)
             sb.Append("const ");
         else if (field.IsStatic)
@@ -247,9 +205,13 @@ public sealed class Metadata : MetadataReader
     StringBuilder MethodToString(MethodBase mthd)
     {
         StringBuilder sb = new();
-        AccessModifiers(sb, new AccessModifiers(mthd));
+        sb.Append(new AccessModifiers(mthd).ToString() + ' ');
         if (mthd.IsStatic)
+        {
+            if (mthd is ConstructorInfo)
+                sb.Append("static ");
             return sb;
+        }
         bool isoverride = false;
         if (Declared != null && mthd is MethodInfo realmethod)
         {
@@ -268,21 +230,7 @@ public sealed class Metadata : MetadataReader
         return sb;
     }
 
-    static void AccessModifiers(StringBuilder sb, AccessModifiers access)
-    {
-        if (access.IsPublic)
-            sb.Append("public ");
-        else if (access.IsFamily)
-            sb.Append("protected ");
-        else if (access.IsPrivate)
-            sb.Append("private ");
-        else if (access.IsAssembly)
-            sb.Append("internal ");
-        else if (access.IsFamilyAndAssembly)
-            sb.Append("private protected ");
-        else if (access.IsFamilyOrAssembly)
-            sb.Append("protected internal ");
-    }
+
 
     //also maybe should add stuff that says if it is public, internal, nested private
     static StringBuilder TypeToString(Type type) //need to add stuff for nested types i think
@@ -297,33 +245,5 @@ public sealed class Metadata : MetadataReader
         return sb;
     }
 
-    static MetadataType GetMetadataType(MemberInfo info) => info switch
-    {
-        ConstructorInfo => MetadataType.Constructor,
-        PropertyInfo => MetadataType.Property,
-        FieldInfo => MetadataType.Field,
-        Type => GetMetadataTypeFromTypeObject((Type)info),
-        EventInfo => MetadataType.Event,
-        MethodInfo => MetadataType.Method,
-        _ => MetadataType.Member
 
-    };
-
-    static MetadataType GetMetadataTypeFromTypeObject(Type type)
-    {
-        if (typeof(Delegate).IsAssignableFrom(type))
-            return MetadataType.Delegate;
-        if (type.IsEnum)
-            return MetadataType.Enum;
-        else if (type.IsArray)
-            return MetadataType.Array;
-        else if (type.IsInterface)
-            return MetadataType.Interface;
-        else if (type != typeof(string) && (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) || typeof(System.Collections.ICollection).IsAssignableFrom(type)))
-            return MetadataType.Collection;
-        else if (type.IsClass)
-            return MetadataType.Class;
-        else
-            return MetadataType.Struct;
-    }
 }
